@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DriveEase — Car Rental</title><link rel="stylesheet" href="/theme.css">
+</head>
+<body>
+<header class="container nav">
+  <a class="logo" href="/">Drive<span>Ease</span></a>
+  <nav class="navlinks"><a href="#cars">Cars</a><a href="#how">How it works</a><a href="#why">Why DriveEase</a></nav>
+  <a class="btn btn-dark" href="/login?next=/app.html">Sign in</a>
+</header>
+
+<main>
+<section class="hero">
+ <div class="container hero-grid">
+  <div>
+   <span class="eyebrow">Simple. Flexible. Ready to drive.</span>
+   <h1>Go where you want. We'll handle the rest.</h1>
+   <p>Premium and everyday cars for city trips, business travel and weekend escapes. Book online in minutes with transparent daily pricing.</p>
+   <div class="hero-actions"><a class="btn btn-brand" href="#cars">Explore cars →</a><a class="btn btn-soft" href="#how">How it works</a></div>
+   <div class="hero-note">✓ No hidden booking fees &nbsp; ✓ Flexible vehicle choices</div>
+  </div>
+  <div class="hero-image"><div class="floating"><small>Popular today</small><strong>Executive Sedan</strong><small>from $89 / day</small></div></div>
+ </div>
+ <div class="container">
+  <form class="searchbox" id="search">
+   <div class="field"><label>SEARCH</label><input id="q" placeholder="Toyota, SUV, premium..."></div>
+   <div class="field"><label>TYPE</label><select id="category"><option value="">All cars</option><option>Economy</option><option>Compact</option><option>Premium</option><option>SUV</option><option>Luxury</option><option>Hybrid</option></select></div>
+   <div class="field"><label>MAX / DAY</label><input id="maxPrice" type="number" min="0" placeholder="$ any"></div>
+   <button class="btn btn-dark">Find cars</button>
+  </form>
+ </div>
+</section>
+
+<section class="section" id="cars">
+ <div class="container">
+  <div class="section-head"><div><span class="eyebrow">Our fleet</span><h2 style="font-size:40px;margin-top:12px">Pick your ride.</h2></div><p>From efficient city cars to spacious SUVs, choose the vehicle that fits your trip and budget.</p></div>
+  <div class="cars" id="carGrid"><div class="empty">Loading our fleet…</div></div>
+ </div>
+</section>
+
+<section class="section" id="why">
+ <div class="container">
+  <div class="section-head"><div><span class="eyebrow">Why us</span><h2 style="font-size:40px;margin-top:12px">Built around your trip.</h2></div></div>
+  <div class="features">
+   <div class="feature"><b>Clear pricing</b><p>See the daily rate upfront, with a booking flow designed to keep the important numbers visible.</p></div>
+   <div class="feature"><b>Flexible fleet</b><p>Choose by vehicle class, seats, transmission and budget instead of scrolling through endless listings.</p></div>
+   <div class="feature"><b>Easy booking</b><p>Search, select your car and reserve it through one simple customer journey.</p></div>
+  </div>
+ </div>
+</section>
+
+<section class="section how" id="how">
+ <div class="container"><div class="section-head"><div><span class="eyebrow">Three steps</span><h2 style="font-size:40px;margin-top:12px">From search to road.</h2></div></div>
+  <div class="steps"><div class="step"><div class="num">01 — SEARCH</div><h3>Find a car</h3><p>Tell us what kind of vehicle you need and browse matching cars.</p></div><div class="step"><div class="num">02 — SELECT</div><h3>Choose your dates</h3><p>Pick your vehicle, location and rental window with transparent pricing.</p></div><div class="step"><div class="num">03 — BOOK</div><h3>Reserve & drive</h3><p>Confirm your details and your reservation is saved to your account.</p></div></div>
+ </div>
+</section>
+</main>
+<footer><div class="container">© 2026 DriveEase · Car rental platform · Built as a full-stack portfolio project</div></footer>
+
+<script>
+const API=window.__HATCHABLE__.api;
+const money=n=>'$'+Number(n).toFixed(0);
+// Fleet images are tied to the car id and served from our own project assets.
+const carImage=c=>'/cars/car-'+Math.min(9,Math.max(1,Number(c.id)||1))+'.jpg';
+function card(c){
+ return '<article class="car"><div class="car-img" style="background-image:url('+JSON.stringify(carImage(c))+')"></div><div class="car-body"><div style="display:flex;justify-content:space-between;gap:10px"><div><small style="color:#687773">'+c.brand+' · '+c.category+'</small><h3 style="font-size:21px;margin-top:5px">'+c.name+'</h3></div></div><div class="tags"><span class="tag">'+c.seats+' seats</span><span class="tag">'+c.transmission+'</span><span class="tag">'+c.fuel+'</span></div><p style="color:#687773;font-size:13px;line-height:1.5">'+c.description+'</p><div class="price"><div><strong>'+money(c.price_per_day)+'</strong><span> / day</span></div><a class="btn btn-brand" href="/car.html?id='+c.id+'">View car</a></div></div></article>';
+}
+async function load(){
+ const params=new URLSearchParams(); const q=document.querySelector('#q').value.trim(); const cat=document.querySelector('#category').value; const max=document.querySelector('#maxPrice').value;
+ if(q)params.set('q',q); if(cat)params.set('category',cat); if(max)params.set('maxPrice',max);
+ const r=await fetch(API+'/cars?'+params); const data=await r.json(); const grid=document.querySelector('#carGrid');
+ grid.innerHTML=data.cars.length?data.cars.map(card).join(''):'<div class="empty">No cars match those filters. Try a broader search.</div>';
+}
+document.querySelector('#search').addEventListener('submit',e=>{e.preventDefault();load()}); load();
+</script>
+</body></html>
