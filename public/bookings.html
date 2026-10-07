@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DriveEase — My Bookings</title><link rel="stylesheet" href="/theme.css">
+<style>
+.bookings-page{padding:42px 0 80px}.bookings-head{display:flex;justify-content:space-between;gap:20px;align-items:end;margin-bottom:25px}.bookings-head h1{font-size:44px;margin:10px 0}.booking-card{display:grid;grid-template-columns:230px 1fr;gap:22px;background:#fff;border:1px solid var(--line);border-radius:22px;padding:16px;margin-bottom:18px;box-shadow:0 10px 30px rgba(16,35,31,.05)}.booking-img{min-height:190px;border-radius:16px;background-size:cover;background-position:center}.booking-main{padding:5px 4px}.booking-top{display:flex;justify-content:space-between;gap:15px;align-items:start}.booking-top h2{font-size:25px}.booking-id{font-size:11px;color:var(--muted);margin-top:4px}.status{display:inline-flex;border-radius:99px;padding:7px 11px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.04em}.status.confirmed{background:#e8f5ed;color:#17623f}.status.pending{background:#fff5dc;color:#8a6200}.status.cancelled{background:#fff0ee;color:#a53b2f}.details{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:18px}.detail{background:#f6f8f6;border-radius:13px;padding:12px}.detail label{display:block;font-size:10px;color:#71807b;text-transform:uppercase;font-weight:800;letter-spacing:.05em;margin-bottom:5px}.detail strong{font-size:13px}.amount{display:flex;justify-content:space-between;align-items:end;border-top:1px solid var(--line);margin-top:18px;padding-top:16px}.amount strong{font:800 25px Manrope}.booking-actions{display:flex;gap:10px;align-items:center}.cancel-btn{border:1px solid #e6c7c2;background:#fff;color:#a53b2f}.cancel-btn:hover{background:#fff4f2}.cancel-btn:disabled{opacity:.55;cursor:not-allowed}.cancel-note{font-size:11px;color:var(--muted)}.empty{background:#fff;border:1px solid var(--line);border-radius:22px;padding:55px 25px;text-align:center}.empty h2{font-size:27px;margin-bottom:8px}.empty p{color:var(--muted);margin-bottom:20px}.nav-actions{display:flex;gap:9px;align-items:center}.muted{color:var(--muted)}@media(max-width:760px){.bookings-head{align-items:start;flex-direction:column}.booking-card{grid-template-columns:1fr}.booking-img{min-height:210px}.details{grid-template-columns:1fr}.booking-top{flex-direction:column}}
+</style>
+</head>
+<body>
+<header class="container nav"><a class="logo" href="/">Drive<span>Ease</span></a><div class="nav-actions"><a class="btn btn-soft" href="/app.html">Browse cars</a><span id="user" class="muted" style="font-size:12px"></span><button id="out" class="btn btn-soft">Sign out</button></div></header>
+<main class="bookings-page"><div class="container">
+<div class="bookings-head"><div><span class="eyebrow">Customer dashboard</span><h1>My bookings.</h1><p class="muted">Your rental history and upcoming drives, all in one place.</p></div><a class="btn btn-brand" href="/app.html">+ Book another car</a></div>
+<div id="loading" class="panel">Loading your bookings…</div><div id="list"></div>
+</div></main>
+<script>
+const API=window.__HATCHABLE__.api,$=id=>document.getElementById(id),money=n=>'$'+Number(n).toFixed(0);const carImage=b=>'/cars/car-'+Math.min(9,Math.max(1,Number(b.car_id)||1))+'.jpg';
+function date(v){return new Date(v).toLocaleString([], {dateStyle:'medium',timeStyle:'short'})}
+function escapeHtml(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]))}
+function card(b){
+ const status=String(b.status||'').toLowerCase();
+ return '<article class="booking-card"><div class="booking-img" style="background-image:url('+JSON.stringify(carImage(b))+')"></div><div class="booking-main"><div class="booking-top"><div><h2>'+escapeHtml(b.car_name)+'</h2><div class="booking-id">'+escapeHtml(b.brand)+' · '+escapeHtml(b.category)+' · Booking #'+b.id+'</div></div><span class="status '+status+'">'+escapeHtml(b.status)+'</span></div><div class="details"><div class="detail"><label>Pickup</label><strong>'+escapeHtml(date(b.pickup_at))+'</strong><div class="muted">'+escapeHtml(b.pickup_location)+'</div></div><div class="detail"><label>Return</label><strong>'+escapeHtml(date(b.dropoff_at))+'</strong><div class="muted">'+escapeHtml(b.dropoff_location)+'</div></div><div class="detail"><label>Vehicle</label><strong>'+b.seats+' seats · '+escapeHtml(b.transmission)+'</strong><div class="muted">'+escapeHtml(b.fuel)+' · '+money(b.price_per_day)+'/day</div></div><div class="detail"><label>Customer</label><strong>'+escapeHtml(b.customer_name)+'</strong><div class="muted">'+escapeHtml(b.customer_phone)+'</div></div></div><div class="amount"><span class="muted">Total rental</span><strong>'+money(b.total_amount)+'</strong></div></div></article>'
+}
+async function init(){
+ const s=await hatchable.auth.getSession();if(!s?.user){location.href='/login?next=/bookings.html';return}
+ $('user').textContent=s.user.email;$('out').onclick=async()=>{await hatchable.auth.signOut();location.href='/'};
+ try{const r=await fetch(API+'/my-bookings');const d=await r.json();if(!r.ok)throw new Error(d.error||'Unable to load bookings.');$('loading').style.display='none';if(!d.bookings.length){$('list').innerHTML='<div class="empty"><h2>No bookings yet.</h2><p>Choose a car and create your first reservation.</p><a class="btn btn-brand" href="/app.html">Explore the fleet →</a></div>';return}$('list').innerHTML=d.bookings.map(card).join('')}catch(e){$('loading').textContent=e.message}}
+async function cancelBooking(id, button){
+ const ok=confirm('Cancel booking #'+id+'? This will release the car for other customers.');
+ if(!ok)return;
+ button.disabled=true;button.textContent='Cancelling…';
+ try{
+   const r=await fetch(API+'/cancel-booking',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({bookingId:id})});
+   const d=await r.json();
+   if(!r.ok)throw new Error(d.error||'Unable to cancel this booking.');
+   alert('Booking #'+id+' has been cancelled.');
+   init();
+ }catch(e){alert(e.message);button.disabled=false;button.textContent='Cancel booking'}
+}
+init();
+</script>
+</body></html>
