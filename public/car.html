@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Car details — DriveEase</title><link rel="stylesheet" href="/theme.css"></head>
+<body>
+<header class="container nav"><a class="logo" href="/">Drive<span>Ease</span></a><a class="btn btn-soft" href="/">← Back to fleet</a></header>
+<main class="container section" id="content"><div class="empty">Loading vehicle…</div></main>
+<script>
+const API=window.__HATCHABLE__.api;
+const money=n=>'$'+Number(n).toFixed(0);
+const carImage=c=>'/cars/car-'+Math.min(9,Math.max(1,Number(c.id)||1))+'.jpg';
+function render(c){
+ document.title=c.name+' — DriveEase';
+ document.querySelector('#content').innerHTML=
+ '<div style="display:grid;grid-template-columns:1.05fr .95fr;gap:34px;align-items:start">'+
+ '<div class="hero-image" style="height:520px;background-image:url('+JSON.stringify(carImage(c))+')"></div>'+
+ '<div><span class="eyebrow">'+c.brand+' · '+c.category+'</span><h1 style="font-size:50px;margin:16px 0 12px">'+c.name+'</h1>'+
+ '<p style="font-size:17px;line-height:1.7;color:var(--muted)">'+c.description+'</p>'+
+ '<div class="tags" style="margin-top:22px"><span class="tag">'+c.seats+' seats</span><span class="tag">'+c.transmission+'</span><span class="tag">'+c.fuel+'</span></div>'+
+ '<div class="card" style="margin-top:26px;padding:24px;background:white;border:1px solid var(--line);border-radius:18px">'+
+ '<div class="price"><div><strong>'+money(c.price_per_day)+'</strong><span> / day</span></div><span>Taxes calculated at booking</span></div>'+
+ '<a class="btn btn-brand" style="width:100%;margin-top:18px" href="/login?next='+encodeURIComponent('/booking.html?car='+c.id)+'">Reserve this car →</a></div></div></div>'+
+ '<section class="section" style="padding-bottom:0"><span class="eyebrow">Good to know</span><div class="features" style="margin-top:18px"><div class="feature"><b>Transparent rate</b><p>Your base rental rate is shown before you start the booking.</p></div><div class="feature"><b>Flexible trip</b><p>Choose pickup and return details in the next step.</p></div><div class="feature"><b>Easy reservation</b><p>Your booking will be saved to your DriveEase account.</p></div></div></section>';
+}
+(async()=>{
+ const id=new URLSearchParams(location.search).get('id');
+ if(!id){location.href='/';return}
+ const r=await fetch(API+'/car?id='+encodeURIComponent(id));const d=await r.json();
+ if(!r.ok){document.querySelector('#content').innerHTML='<div class="empty">'+(d.error||'Car not found')+'</div>';return}
+ render(d.car);
+})();
+</script>
+<style>@media(max-width:800px){#content>div:first-child{grid-template-columns:1fr!important}.hero-image{height:330px!important}}</style>
+</body></html>
