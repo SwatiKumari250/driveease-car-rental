@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DriveEase — Reserve your car</title><link rel="stylesheet" href="/theme.css">
+<style>
+.booking-wrap{padding:45px 0 80px}.booking-grid{display:grid;grid-template-columns:1.2fr .8fr;gap:24px;align-items:start}
+.panel{background:#fff;border:1px solid var(--line);border-radius:22px;padding:26px;box-shadow:0 12px 35px rgba(16,35,31,.06)}
+.panel h1{font-size:38px;margin-bottom:8px}.muted{color:var(--muted);line-height:1.6}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:24px}
+.form-field{display:flex;flex-direction:column;gap:7px}.form-field label{font-size:12px;font-weight:800;color:#56635f;text-transform:uppercase;letter-spacing:.06em}.form-field input{border:1px solid var(--line);border-radius:11px;padding:13px;background:#f8faf8;font:600 14px 'DM Sans';color:var(--ink);outline:none}.form-field input:focus{border-color:var(--brand);background:#fff}
+.summary-img{height:210px;border-radius:16px;background-size:cover;background-position:center;margin-bottom:18px}.summary h2{font-size:27px}.summary-meta{display:flex;gap:7px;flex-wrap:wrap;margin:10px 0 16px}.summary-meta span{background:#edf2ef;border-radius:99px;padding:7px 9px;font-size:11px}.total{border-top:1px solid var(--line);margin-top:22px;padding-top:20px;display:flex;justify-content:space-between;align-items:end}.total strong{font:800 30px Manrope}.estimate{font-size:12px;color:var(--muted)}
+.notice{margin-top:16px;background:#f2f6ee;border-radius:13px;padding:12px;font-size:12px;color:#52605c;line-height:1.5}.availability{margin-top:14px;border-radius:13px;padding:12px;font-size:13px;line-height:1.45}.available{background:#eaf6ee;color:#17623f}.unavailable{background:#fff0ee;color:#a53b2f}.checking{background:#f2f5f3;color:#56635f}
+.error{display:none;background:#fff0ee;color:#a53b2f;border-radius:12px;padding:12px;margin-top:16px;font-size:13px}.success{display:none;text-align:center;padding:25px 0}.success .ref{font:800 26px Manrope;margin:8px 0}.topbar{height:72px;border-bottom:1px solid var(--line);background:#fff}.topbar .container{height:100%;display:flex;align-items:center;justify-content:space-between}.back{font-weight:700;color:var(--brand)}
+@media(max-width:800px){.booking-grid{grid-template-columns:1fr}.form-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header class="topbar"><div class="container"><a class="logo" href="/">Drive<span>Ease</span></a><a class="back" href="/">← Back to cars</a></div></header>
+<main class="booking-wrap"><div class="container">
+<div id="loading" class="panel">Loading your selected car…</div>
+<div id="booking" class="booking-grid" style="display:none">
+<section class="panel">
+<span class="eyebrow">Live availability</span><h1>Reserve your ride.</h1>
+<p class="muted">Choose your rental window. We’ll check the vehicle before creating your reservation.</p>
+<form id="form">
+<div class="form-grid">
+<div class="form-field"><label>Pickup location</label><input id="pickupLocation" required placeholder="Airport, hotel or city"></div>
+<div class="form-field"><label>Drop-off location</label><input id="dropoffLocation" required placeholder="Return location"></div>
+<div class="form-field"><label>Pickup date & time</label><input id="pickupAt" type="datetime-local" required></div>
+<div class="form-field"><label>Return date & time</label><input id="dropoffAt" type="datetime-local" required></div>
+<div class="form-field"><label>Your name</label><input id="customerName" required minlength="2" placeholder="Full name"></div>
+<div class="form-field"><label>Phone number</label><input id="customerPhone" required placeholder="+91 98765 43210"></div>
+</div>
+<div id="availability" class="availability checking">Checking availability…</div>
+<div id="error" class="error"></div>
+<button id="submitBtn" class="btn btn-brand" style="width:100%;margin-top:20px" disabled>Check availability first</button>
+</form>
+<div id="success" class="success"><div class="eyebrow">Reservation confirmed</div><div class="ref" id="ref"></div><p class="muted" id="successText"></p><a class="btn btn-dark" href="/">Browse more cars</a></div>
+</section>
+<aside class="panel summary">
+<div id="carImage" class="summary-img"></div><small id="carBrand" class="muted"></small><h2 id="carName"></h2>
+<div id="carMeta" class="summary-meta"></div><p id="carDescription" class="muted"></p>
+<div class="total"><div><span class="estimate">Estimated total</span><div><strong id="total">$0</strong></div></div><span class="estimate" id="days">1 day</span></div>
+<div class="notice">Availability is checked against existing pending and confirmed reservations. Overlapping bookings are blocked.</div>
+</aside>
+</div></div></main>
+<script>
+const API=window.__HATCHABLE__.api;let car=null,available=false,checkTimer;
+const carImage=c=>'/cars/car-'+Math.min(9,Math.max(1,Number(c.id)||1))+'.jpg';
+const $=id=>document.getElementById(id),money=n=>'$'+Number(n).toFixed(0);
+function local(d){const x=new Date(d.getTime()-d.getTimezoneOffset()*60000);return x.toISOString().slice(0,16)}
+function setDefaultDates(){const now=new Date();now.setMinutes(now.getMinutes()+60-now.getMinutes()%30);$('pickupAt').value=local(now);$('dropoffAt').value=local(new Date(now.getTime()+2*86400000))}
+function updateTotal(){if(!car)return;const a=new Date($('pickupAt').value),b=new Date($('dropoffAt').value);if(Number.isNaN(a.getTime())||Number.isNaN(b.getTime())||b<=a){$('total').textContent='$0';$('days').textContent='Select valid dates';return}const days=Math.max(1,Math.ceil((b-a)/86400000));$('total').textContent=money(Number(car.price_per_day)*days);$('days').textContent=days+' '+(days===1?'day':'days')}
+async function checkAvailability(){
+ available=false;$('submitBtn').disabled=true;$('submitBtn').textContent='Checking availability…';$('availability').className='availability checking';$('availability').textContent='Checking this vehicle for your selected dates…';
+ updateTotal();
+ const a=$('pickupAt').value,b=$('dropoffAt').value;
+ if(!a||!b||new Date(b)<=new Date(a)){ $('availability').textContent='Choose a valid pickup and return time.';return }
+ try{const r=await fetch(API+'/check-availability?carId='+encodeURIComponent(car.id)+'&pickupAt='+encodeURIComponent(a)+'&dropoffAt='+encodeURIComponent(b));const data=await r.json();if(!r.ok)throw new Error(data.error||'Availability check failed.');available=data.available;if(available){$('availability').className='availability available';$('availability').textContent='✓ '+data.message;$('submitBtn').disabled=false;$('submitBtn').textContent='Confirm reservation →'}else{$('availability').className='availability unavailable';$('availability').textContent='✕ '+data.message;$('submitBtn').textContent='Choose different dates';}}catch(e){$('availability').className='availability unavailable';$('availability').textContent=e.message}}
+function scheduleCheck(){clearTimeout(checkTimer);checkTimer=setTimeout(checkAvailability,350)}
+async function init(){
+ const session=await window.hatchable.auth.getSession();if(!session?.user){location.href='/login?next='+encodeURIComponent(location.pathname+location.search);return}
+ const id=new URLSearchParams(location.search).get('car');if(!id){location.href='/';return}
+ const r=await fetch(API+'/car?id='+encodeURIComponent(id));const data=await r.json();if(!r.ok||!data.car){$('loading').textContent='We could not find that car.';return}
+ car=data.car;$('carImage').style.backgroundImage='url('+JSON.stringify(carImage(car))+')';$('carBrand').textContent=car.brand+' · '+car.category;$('carName').textContent=car.name;$('carDescription').textContent=car.description;$('carMeta').innerHTML='<span>'+car.seats+' seats</span><span>'+car.transmission+'</span><span>'+car.fuel+'</span><span>'+money(car.price_per_day)+' / day</span>';$('booking').style.display='grid';$('loading').style.display='none';setDefaultDates();updateTotal();checkAvailability()}
+['pickupAt','dropoffAt'].forEach(id=>$(id).addEventListener('input',scheduleCheck));
+$('form').addEventListener('submit',async e=>{e.preventDefault();if(!available){checkAvailability();return}$('error').style.display='none';$('submitBtn').disabled=true;$('submitBtn').textContent='Confirming…';try{const r=await fetch(API+'/create-booking',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({carId:car.id,pickupLocation:$('pickupLocation').value,dropoffLocation:$('dropoffLocation').value,pickupAt:$('pickupAt').value,dropoffAt:$('dropoffAt').value,customerName:$('customerName').value,customerPhone:$('customerPhone').value})});const data=await r.json();if(!r.ok)throw new Error(data.error||'Could not create reservation.');location.href='/confirmation.html?id='+encodeURIComponent(data.booking.id);$('ref').textContent='Booking #'+data.booking.id;$('successText').textContent=data.message+' Total: '+money(data.booking.total_amount)+' for '+data.rentalDays+' '+(data.rentalDays===1?'day.':'days.')}catch(err){$('error').textContent=err.message;$('error').style.display='block';$('submitBtn').disabled=false;$('submitBtn').textContent='Check availability again';available=false}});
+init();
+</script>
+</body></html>
